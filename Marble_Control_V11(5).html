@@ -1,0 +1,71 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Marble Control V11</title>
+<style>
+body{margin:0;font-family:Segoe UI,Arial;background:linear-gradient(135deg,#e0f2fe,#ecfdf5)}
+header{background:linear-gradient(90deg,#2563eb,#10b981);color:#fff;padding:18px;text-align:center;position:relative;overflow:hidden}
+header:before,header:after{content:"";position:absolute;border-radius:50%;background:#ffffff22}
+header:before{width:180px;height:180px;top:-70px;left:-40px}
+header:after{width:140px;height:140px;right:-30px;bottom:-60px}
+.card{max-width:1000px;margin:18px auto;background:#fff;padding:18px;border-radius:18px;box-shadow:0 8px 20px rgba(0,0,0,.12)}
+.hidden{display:none}
+input,select,textarea,button{width:100%;padding:10px;margin:6px 0;border-radius:10px;font-size:14px}
+button{border:none;background:linear-gradient(90deg,#2563eb,#10b981);color:#fff;cursor:pointer}
+.small{background:#6b7280}
+.prod{background:#f8fafc;border-left:5px solid #10b981;padding:10px;margin:8px 0;border-radius:10px}
+table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:6px}th{background:#2563eb;color:#fff}
+.decor{display:flex;gap:10px;justify-content:center;margin:8px 0}.dot{width:14px;height:14px;border-radius:50%}.b{background:#2563eb}.g{background:#10b981}.c{background:#06b6d4}
+</style></head><body>
+<header><h1>🏢 Marble Control</h1><div class="decor"><div class="dot b"></div><div class="dot g"></div><div class="dot c"></div></div></header>
+
+<div class="card" id="login"><h2>Inicio de sesión</h2>
+<select id="rol"><option>Administrador</option><option>Auxiliar de almacén</option></select>
+<input id="codigo" type="password" placeholder="Código">
+<button onclick="ingresar()">Ingresar</button></div>
+
+<div class="card hidden" id="admin">
+<button class="small" onclick="volver()">← Volver al inicio</button>
+<h2>Administrador</h2>
+<input id="nom" placeholder="Nombre auxiliar"><input id="cod" placeholder="Código auxiliar">
+<button onclick="crear()">Crear auxiliar</button>
+<select id="sel"></select><input id="nuevo" placeholder="Nuevo código">
+<button onclick="cambiar()">Cambiar código</button>
+<button onclick="estado()">Activar / Desactivar</button>
+<table><thead><tr><th>Nombre</th><th>Código</th><th>Estado</th></tr></thead><tbody id="auxRows"></tbody></table>
+<hr>
+<label>Desde</label><input type="date" id="f1"><label>Hasta</label><input type="date" id="f2">
+<button onclick="filtrar()">Filtrar</button><button onclick="csv()">Exportar CSV</button>
+<table><thead><tr><th>Fecha</th><th>Auxiliar</th><th>Tipo</th><th>Productos</th></tr></thead><tbody id="hist"></tbody></table>
+</div>
+
+<div class="card hidden" id="aux">
+<button class="small" onclick="volver()">← Cerrar sesión</button>
+<h2>Registro de almacén</h2>
+<select id="tipo" onchange="vend.style.display=this.value==='Salida'?'block':'none'"><option>Salida</option><option>Ingreso</option></select>
+<div id="vend"><input id="venInput" placeholder="Vendedora"></div>
+<div id="productos"><div class="prod"><input class="p" placeholder="Producto"><input class="q" type="number" placeholder="Cantidad"></div></div>
+<button onclick="agregar()">+ Agregar otro producto</button>
+<input id="foto" type="file" accept="image/*" capture="environment">
+<textarea id="obs" placeholder="Observaciones"></textarea>
+<button onclick="guardar()">Guardar movimiento</button>
+<button class="small" onclick="nuevoRegistro()">Nuevo registro</button>
+</div>
+
+<script>
+const ADMIN="122105";
+if(!localStorage.getItem("auxs"))localStorage.setItem("auxs",JSON.stringify([{nombre:"Auxiliar de prueba",codigo:"AUX001",estado:"Activo"}]));
+const G=k=>JSON.parse(localStorage.getItem(k)||"[]"),S=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+let actual="";
+function pant(l,a,x){login.classList.toggle("hidden",!l);admin.classList.toggle("hidden",!a);aux.classList.toggle("hidden",!x);}
+function ingresar(){if(rol.value==="Administrador"){if(codigo.value!==ADMIN){alert("Código incorrecto");return;}pant(false,true,false);cargarAux();cargarHist(G("movs"));}else{let u=G("auxs").find(e=>e.codigo===codigo.value&&e.estado==="Activo");if(!u){alert("Código inválido");return;}actual=u.nombre;pant(false,false,true);}}
+function volver(){codigo.value="";pant(true,false,false);}
+function crear(){let a=G("auxs");a.push({nombre:nom.value,codigo:cod.value,estado:"Activo"});S("auxs",a);cargarAux();}
+function cargarAux(){let a=G("auxs");auxRows.innerHTML="";sel.innerHTML="";a.forEach((e,i)=>{auxRows.innerHTML+=`<tr><td>${e.nombre}</td><td>${e.codigo}</td><td>${e.estado}</td></tr>`;sel.innerHTML+=`<option value="${i}">${e.nombre}</option>`;});}
+function cambiar(){let a=G("auxs");a[sel.value].codigo=nuevo.value;S("auxs",a);cargarAux();}
+function estado(){let a=G("auxs");a[sel.value].estado=a[sel.value].estado==="Activo"?"Inactivo":"Activo";S("auxs",a);cargarAux();}
+function agregar(){let d=document.createElement("div");d.className="prod";d.innerHTML='<input class="p" placeholder="Producto"><input class="q" type="number" placeholder="Cantidad">';productos.appendChild(d);}
+function guardar(){let items=[];document.querySelectorAll(".prod").forEach(x=>{let p=x.querySelector(".p").value,q=x.querySelector(".q").value;if(p)items.push(p+" x"+q)});let m=G("movs");m.push({iso:new Date().toISOString().slice(0,10),fecha:new Date().toLocaleString(),aux:actual,tipo:tipo.value,productos:items.join(" | ")});S("movs",m);alert("Movimiento guardado");}
+function nuevoRegistro(){tipo.value="Salida";venInput.value="";obs.value="";foto.value="";productos.innerHTML='<div class="prod"><input class="p" placeholder="Producto"><input class="q" type="number" placeholder="Cantidad"></div>';}
+function cargarHist(d){hist.innerHTML="";d.forEach(r=>hist.innerHTML+=`<tr><td>${r.fecha}</td><td>${r.aux}</td><td>${r.tipo}</td><td>${r.productos}</td></tr>`);}
+function filtrar(){cargarHist(G("movs").filter(r=>(!f1.value||r.iso>=f1.value)&&(!f2.value||r.iso<=f2.value)));}
+function csv(){let t="Fecha,Auxiliar,Tipo,Productos\n";document.querySelectorAll("#hist tr").forEach(tr=>t+=[...tr.children].map(td=>td.innerText).join(",")+"\n");let b=new Blob([t],{type:"text/csv"});let a=document.createElement("a");a.href=URL.createObjectURL(b);a.download="Historial.csv";a.click();}
+</script></body></html>
